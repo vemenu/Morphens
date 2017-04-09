@@ -15,6 +15,7 @@ class Role(db.Model):
     def __repr__(self):
         return '<Role %r>' %self.name
 
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer,primary_key=True)
