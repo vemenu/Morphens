@@ -1,8 +1,9 @@
 #!user/bin/env python
 # -*- coding:utf-8 -*-
+from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from . import db
+from . import db, login_manager
 
 
 class Role(db.Model):
@@ -16,11 +17,12 @@ class Role(db.Model):
         return '<Role %r>' %self.name
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     '''用户模型'''
     __tablename__ = 'users'
     id = db.Column(db.Integer,primary_key=True)
     username = db.Column(db.String(64),unique=True,index=True)
+    email = db.Column(db.String(64), unique=True, index=True)
     role_id = db.Column(db.Integer,db.ForeignKey('roles.id'))
 
     @property
@@ -36,3 +38,8 @@ class User(db.Model):
 
     def __repr__(self):
         return '<User %r>'%self.username
+
+
+@login_manager.user_loader
+def user_loader(user_id):
+    return User.query.get(int(user_id))
