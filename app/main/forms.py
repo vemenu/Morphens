@@ -3,11 +3,12 @@
 
 '''登录表单'''
 
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import Required
 
-class NameForm(Form):
+
+class NameForm(FlaskForm):
     name = StringField('what is  you name?', validators=[Required()])
     pwd = PasswordField('please input passwd')
     submit = SubmitField('Submit')
