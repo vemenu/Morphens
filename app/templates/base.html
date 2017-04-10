@@ -1,0 +1,63 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}
+Flasky
+{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="shortcut icon" href="{{ url_for('static',filename='favicon.ico') }}">
+<link rel="icon" href="{{ url_for('static',filename='favicon.ico') }}">
+{{ moment.lang('zh-CN') }}
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+{{ moment.include_jquery() }}
+{{ moment.include_moment() }}
+{% endblock %}
+
+
+{% block navbar %}
+<div class="navbar navbar-inverse" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button class="navbar-toggle" type="button" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icor-bar"></span>
+                <span class="icor-bar"></span>
+                <span class="icor-bar"></span>
+            </button>
+            <a href="/" class="navbar-brand">Flasky</a>
+        </div>
+        <div class="navbar-collapse collapse">
+            <ul class="navbar-nav navbar">
+                <li class="navbar-inverse"><a href="/">首页</a></li>
+                <li class="navbar-inverse"><a href="/">新闻</a></li>
+                <li class="navbar-inverse"><a href="/">产品分类</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                {% if not current_user.is_authenticated %}
+                <li><a href="{{ url_for('auth.logout') }}">Sign Out</a></li>
+                {% else %}
+                <li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% for message in get_flashed_messages() %}
+    <div class="alert-warning alert">
+        <button class="close" type="button" data-dismiss="alert">&times;</button>
+        {{ message }}
+    </div>
+    {% endfor %}
+
+    {% block page_content %}{% endblock %}
+</div>
+{% endblock %}
+

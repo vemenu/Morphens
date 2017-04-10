@@ -4,11 +4,12 @@
 '''蓝本中的路由'''
 
 from datetime import datetime
+
 from flask import render_template,session,redirect,url_for
 
 from . import main
 from .forms import NameForm
-from ..models import User
+
 
 @main.route('/',methods = ['GET','POST'])
 def index():
@@ -22,5 +23,3 @@ def index():
                            know = session.get('know',False),
                            current_time = datetime.utcnow()
                            )
-
-
