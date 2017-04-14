@@ -4,10 +4,27 @@ from flask_login import login_required, logout_user, login_user
 
 from app import db
 from . import auth
-from .forms import Login_Form, RegistrationForm
+from .forms import Login_Form, RegistrationForm, PasswordResetRequestForm
 from ..email import send_mail
 from ..models import User
 
+
+@auth.before_app_request
+def befor_requst():
+    if current_user.is_authenticated:
+        if not current_user.confirmed \
+                and request.endpoint \
+                and request.endpoint[:5] != 'auth.' \
+                and request.endpoint != 'static':
+            pass
+        return redirect(url_for('auth.unconfirmed'))
+
+
+@auth.route('/unconfirmed')
+def unconfirmed():
+    if current_user.is_anonymous or current_user.confirmed:
+        return redirect(url_for('main.index'))
+    return render_template('auth/unconfirmed.html')
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -54,23 +71,6 @@ def confirm(token):
     return redirect(url_for('main.index'))
 
 
-@auth.before_app_request
-def befor_requst():
-    if current_user.is_authenticated:
-        if not current_user.confirmed \
-                and request.endpoint \
-                and request.endpoint[:5] != 'auth.' \
-                and request.endpoint != 'static':
-            return redirect(url_for('auth.unconfirmed'))
-
-
-@auth.route('/unconfirmed')
-def unconfirmed():
-    if current_user.is_anonymous or current_user.confirmed:
-        return redirect(url_for('main.index'))
-    return render_template('auth/unconfirmed.html')
-
-
 @auth.route('/confirm')
 @login_required
 def resend_confirmation():
@@ -78,3 +78,47 @@ def resend_confirmation():
     send_mail(current_user.email, 'Confirm Your Account', 'auth/email/confirm', user=current_user, token=token)
     flash('A new confirmation email has benn sent to you by email')
     return redirect(url_for('main.index'))
+
+
+@auth.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    form = change_password()
+    if form.validate_on_submit:
+        if current_user.verfity_password(form.old_password.data):
+            current_user.password = form.password.data
+            db.session.add(current_user)
+            flash('Your password has been updated')
+            return redirect(url_for('main.index'))
+        else:
+            flash('Invalid password')
+    return render_template('/auth/change_password.html', form=form)
+
+
+@auth.route('/reset', methods=['GET', 'POST'])
+def password_reset_request():
+    if not current_user.is_anonymous:
+        return redirect(url_for('main.index'))
+    form = PasswordResetRequestForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            token = user.generate_reset_token()
+            send_mail(user.email, 'Rese')
+
+
+@auth.route('/reset/<token>', methods=['GET', 'POST'])
+def password_reset(token):
+    pass
+
+
+@auth.route('/change-email', methods=['GET', 'POST'])
+@login_required
+def change_email_request():
+    pass
+
+
+@auth.route('/change_email/<token>')
+@login_required
+def change_email(token):
+    pass
