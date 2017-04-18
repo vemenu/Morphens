@@ -3,7 +3,7 @@
 
 import unittest
 
-from app.models import User
+from app.models import User, Role, Permission, AnonymousUser
 
 
 class UserModelTestCase(unittest.TestCase):
@@ -25,3 +25,13 @@ class UserModelTestCase(unittest.TestCase):
         u1 = User(password='cat')
         u2 = User(password='cat')
         self.assertTrue(u1.password_hash != u2.password_hash)
+
+    def test_roles_and_permission(self):
+        Role.insert_roles()
+        u = User(email='john@example.com', password='cat')
+        self.assertTrue(u.can(Permission.WRITE_ARTICLES))
+        self.assertFalse(u.can(Permission.MODERATE_COMMENTS))
+
+    def test_anonymouse_user(self):
+        u = AnonymousUser()
+        self.assertFalse(u.can(Permission.FOLLOW))

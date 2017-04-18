@@ -5,8 +5,10 @@
 
 from datetime import datetime
 
+from flask import abort
 from flask import render_template,session,redirect,url_for
 
+from app.models import User
 from . import main
 from .forms import NameForm
 
@@ -23,3 +25,11 @@ def index():
                            know = session.get('know',False),
                            current_time = datetime.utcnow()
                            )
+
+
+@main.route('/user/<username>')
+def user(username):
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        abort(404)
+    return render_template('user.html', user=user)

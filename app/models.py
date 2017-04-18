@@ -1,6 +1,10 @@
 #!user/bin/env python
 # -*- coding:utf-8 -*-
+from datetime import datetime
+
 from flask import current_app
+from flask.ext.login import AnonymousUserMixin
+from flask.ext.login import current_user
 from flask_login import UserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -9,21 +13,18 @@ from . import db, login_manager
 
 
 class Permission:
-    '''设定权限常量'''
-    FOLLOW = 0x01,
-    COMMENT = 0x02,
-    WRITE_ARTICLES = 0x04,
-    MODERATE_COMMENTS = 0x08,
+    FOLLOW = 0x01
+    COMMENT = 0x02
+    WRITE_ARTICLES = 0x04
+    MODERATE_COMMENTS = 0x08
     ADMINISTER = 0x80
 
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer,primary_key=True)
     name = db.Column(db.String(64),unique=True)
-    # 增加default permissions 字段，实现用户权限控制
     default = db.Column(db.Boolean, default=False, index=True)
     permissions = db.Column(db.Integer)
-    # 关系定义
     users = db.relationship('User',backref='role',lazy='dynamic')
 
     def __repr__(self):
@@ -32,8 +33,12 @@ class Role(db.Model):
     @staticmethod
     def insert_roles():
         roles = {
-            'User': (Permission.FOLLOW | Permission.COMMENT | Permission.WRITE_ARTICLES, True),
-            'Moderator': (Permission.FOLLOW | Permission.COMMENT | Permission.WRITE_ARTICLES | \
+            'User': (Permission.FOLLOW |
+                     Permission.COMMENT |
+                     Permission.WRITE_ARTICLES, True),
+            'Moderator': (Permission.FOLLOW |
+                          Permission.COMMENT |
+                          Permission.WRITE_ARTICLES |
                           Permission.MODERATE_COMMENTS, False),
             'Administrator': (0xff, False)
         }
@@ -46,9 +51,7 @@ class Role(db.Model):
             db.session.add(role)
         db.session.commit()
 
-
 class User(UserMixin, db.Model):
-    '''用户模型'''
     __tablename__ = 'users'
     id = db.Column(db.Integer,primary_key=True)
     username = db.Column(db.String(64),unique=True,index=True)
@@ -56,6 +59,12 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(64), unique=True, index=True)
     confirmed = db.Column(db.Boolean, default=False)
     role_id = db.Column(db.Integer,db.ForeignKey('roles.id'))
+    name = db.Column(db.String(64))
+    location = db.Column(db.String(64))
+    about_me = db.Column(db.Text())
+    member_since = db.Column(db.DateTime(), default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
+
 
     @property
     def password(self):
@@ -84,10 +93,39 @@ class User(UserMixin, db.Model):
         db.session.add(self)
         return True
 
+    def __init__(self, **kwargs):
+        super(User, self).__init__(**kwargs)
+        if self.role is None:
+            if self.email == current_user.config['FLASKY_ADMIN']:
+                self.role = Role.query.filter_by(Permission=0xff).first()
+            if self.role is None:
+                self.role = Role.query.filter_by(default=True).first()
+
+    def can(self, permissions):
+        return self.role is not None and (self.role.permissions & permissions) == permissions
+
+    def is_administrator(self):
+        return self.can(Permission.ADMINISTER)
+
+    def ping(self):
+
+        self.last_seen = datetime.utcnow()
+        db.session.add(self)
+
     def __repr__(self):
         return '<User %r>'%self.username
 
 
+class AnonymousUser(AnonymousUserMixin):
+    def can(self, permissions):
+        return False
+
+    def is_administrator(self):
+        return False
+
+
+login_manager.anonymous_user = AnonymousUser
+
 @login_manager.user_loader
-def user_loader(user_id):
+def load_user(user_id):
     return User.query.get(int(user_id))
